@@ -22,16 +22,39 @@ type ResponseUser struct {
 	ProfileMessage string `json:"profileMessage"`
 }
 
-type UpdateUserInfo struct {
+type UserInfo struct {
 	Name           string `json:"name"`
 	ProfileImage   string `json:"profileImage"`
 	ProfileMessage string `json:"profileMessage"`
 }
 
+func GetUserInfoFunc(c *gin.Context) {
+	id := c.Param("id")
+	userInfo := GetUserInfo(id)
+	c.JSON(200, userInfo)
+}
+
+func GetUserInfo(id string) UserInfo {
+	db, err := sql.Open("sqlite3", "./10s.db")
+	defer db.Close()
+	checkErr(err)
+
+	rows, err := db.Query("SELECT name, profile_image, profile_message FROM user WHERE id=" + id)
+	checkErr(err)
+	var userInfo UserInfo
+
+	for rows.Next() {
+		err := rows.Scan(&userInfo.Name, &userInfo.ProfileImage, &userInfo.ProfileMessage)
+		checkErr(err)
+	}
+
+	return userInfo
+}
+
 func UpdateUserFunc(c *gin.Context) {
 	id := c.Param("id")
 
-	var user UpdateUserInfo
+	var user UserInfo
 	c.BindJSON(&user)
 
 	UpdateUser(id, user)
@@ -39,7 +62,7 @@ func UpdateUserFunc(c *gin.Context) {
 	c.JSON(200, gin.H{"Message": "ok"})
 }
 
-func UpdateUser(id string, user UpdateUserInfo) {
+func UpdateUser(id string, user UserInfo) {
 	db, err := sql.Open("sqlite3", "./10s.db")
 	defer db.Close()
 	checkErr(err)
