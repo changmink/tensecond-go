@@ -11,5 +11,6 @@ func main() {
 	r.GET("/friends/:id", router.Friend)
 	r.GET("/users/:id", router.GetUserInfoFunc)
 	r.PUT("/users/:id", router.UpdateUserFunc)
+	r.GET("/users/:id/chats", router.GetUserChats)
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
