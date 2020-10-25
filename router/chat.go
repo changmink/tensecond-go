@@ -16,6 +16,83 @@ type ChatRoom struct {
 	Count    int       `json:"count"`
 }
 
+type Message struct {
+	UserId   int64     `json:"userId"`
+	Length   int       `json:"length"`
+	Audio    string    `json:"audio"`
+	Read     bool      `json:"read"`
+	Outdated bool      `json:"outdated"`
+	Modified time.Time `json:"modified"`
+}
+
+type MessageList struct {
+	Date     string `json:"date"`
+	Messages []Message
+}
+
+func GetChatMessageList(c *gin.Context) {
+	roomId := c.Param("roomId")
+
+	db, err := sql.Open("sqlite3", "./10s.db")
+	defer db.Close()
+	checkErr(err)
+
+	rows, err := db.Query("SELECT date(modified_date) as date FROM message WHERE room_id=" + roomId + " GROUP BY date(modified_date)")
+	checkErr(err)
+
+	messageList := make([]MessageList, 0)
+	for rows.Next() {
+		var msgList MessageList
+		err := rows.Scan(&msgList.Date)
+		checkErr(err)
+		messages := GetChatMessagesFromIdAndDate(roomId, msgList.Date)
+		msgList.Messages = messages
+		messageList = append(messageList, msgList)
+	}
+	c.JSON(200, messageList)
+}
+
+func GetChatMessagesFromIdAndDate(roomId string, date string) []Message {
+	db, err := sql.Open("sqlite3", "./10s.db")
+	defer db.Close()
+	checkErr(err)
+	sql := "SELECT user_id, length, audio, read, outdate, modified_date FROM message WHERE room_id=" + roomId + " AND date(modified_date)='" + date + "' ORDER BY modified_date"
+	fmt.Println(sql)
+	rows, err := db.Query(sql)
+	checkErr(err)
+
+	messages := make([]Message, 0)
+	for rows.Next() {
+		var msg Message
+		err := rows.Scan(&msg.UserId, &msg.Length, &msg.Audio, &msg.Read, &msg.Outdated, &msg.Modified)
+		checkErr(err)
+		messages = append(messages, msg)
+	}
+
+	return messages
+}
+
+func GetChatMessages(c *gin.Context) {
+	roomId := c.Param("roomId")
+
+	db, err := sql.Open("sqlite3", "./10s.db")
+	defer db.Close()
+	checkErr(err)
+
+	rows, err := db.Query("SELECT user_id, length, audio, read, outdate, modified_date FROM message WHERE room_id=" + roomId + " ORDER BY modified_date")
+	checkErr(err)
+
+	messages := make([]Message, 0)
+	for rows.Next() {
+		var msg Message
+		err := rows.Scan(&msg.UserId, &msg.Length, &msg.Audio, &msg.Read, &msg.Outdated, &msg.Modified)
+		checkErr(err)
+		messages = append(messages, msg)
+	}
+
+	c.JSON(200, messages)
+}
+
 func GetUserChats(c *gin.Context) {
 	id := c.Param("id")
 	chats := GetChatsByUserId(id)
